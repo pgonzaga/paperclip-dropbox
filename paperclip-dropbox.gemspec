@@ -17,13 +17,13 @@ Gem::Specification.new do |gem|
 
   gem.license       = "MIT"
 
-  gem.add_dependency "paperclip", ">= 3.1", "< 5"
-  gem.add_dependency "dropbox-sdk", "~> 1.3"
+  gem.add_dependency 'paperclip', '~> 6.1'
+  gem.add_dependency "dropbox-sdk-v2", "~> 0.0"
 
   gem.add_development_dependency "rake"
   gem.add_development_dependency "rspec", "~> 2.11"
   gem.add_development_dependency "vcr", ">= 2.6"
   gem.add_development_dependency "webmock", ">= 1.8", "< 1.10"
-  gem.add_development_dependency "activerecord", ">= 3.2"
+  gem.add_development_dependency "activerecord", "5.2.3"
   gem.add_development_dependency "rest-client", ">= 1.6"
 end

@@ -4,7 +4,6 @@ require_relative "credentials"
 Paperclip.options[:log] = false
 Paperclip::Attachment.default_options.merge!(
   storage: :dropbox,
-  processors: [:noop],
 )
 
 module Paperclip
@@ -13,8 +12,4 @@ module Paperclip
       file
     end
   end
-end
-
-Paperclip.configure do |config|
-  config.register_processor :noop, Paperclip::Noop
 end

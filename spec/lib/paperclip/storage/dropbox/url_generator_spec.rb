@@ -9,7 +9,7 @@ describe Paperclip::Storage::Dropbox::UrlGenerator do
   def new_post(options = {})
     Post.has_attached_file :attachment, @options
     Post.validates_attachment_content_type :attachment, :content_type => %w(image/jpeg image/jpg image/png)
-    Post.new({attachment: uploaded_file("photo.jpg")}.merge(options))
+    Post.new({attachment: uploaded_file("photo.png")}.merge(options))
   end
 
   describe "#generate" do
@@ -18,6 +18,7 @@ describe Paperclip::Storage::Dropbox::UrlGenerator do
         before do
           @options.update(
             dropbox_credentials: CREDENTIALS[access_type],
+            dropbox_visibility: "private",
             styles: {thumb: ""},
           )
         end
@@ -26,12 +27,6 @@ describe Paperclip::Storage::Dropbox::UrlGenerator do
           post = new_post.tap(&:save)
           expect(post.attachment.url).to be_an_existing_url
           expect(post.attachment.url(:thumb)).to be_an_existing_url
-        end
-
-        it "accepts the :download option" do
-          post = new_post.tap(&:save)
-          expect(post.attachment.url(download: true)).to match(/dl=1/)
-          expect(post.attachment.url(download: true)).to be_an_existing_url
         end
       end
     end

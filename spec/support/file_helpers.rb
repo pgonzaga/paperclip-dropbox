@@ -8,7 +8,7 @@ module FileHelpers
 
   class UploadedFile < SimpleDelegator
     def content_type
-      "text/plain"
+      "image/png"
     end
 
     def original_filename

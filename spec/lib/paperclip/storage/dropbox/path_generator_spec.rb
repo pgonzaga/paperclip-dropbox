@@ -8,12 +8,12 @@ describe Paperclip::Storage::Dropbox::PathGenerator do
   def new_post(options = {})
     Post.has_attached_file :attachment, @options
     Post.validates_attachment_content_type :attachment, :content_type => %w(image/jpeg image/jpg image/png)
-    Post.new({attachment: uploaded_file("photo.jpg")}.merge(options))
+    Post.new({attachment: uploaded_file("photo.png")}.merge(options))
   end
 
   describe "#generate" do
     it "defaults to filename" do
-      expect(new_post.attachment.path).to eq "photo.jpg"
+      expect(new_post.attachment.path).to eq "/photo.png"
     end
 
     context "when path is a string" do
@@ -22,7 +22,7 @@ describe Paperclip::Storage::Dropbox::PathGenerator do
       end
 
       it "interpolates with Paperclip's interpolator" do
-        expect(new_post.attachment.path(:medium)).to eq "medium/posts_photo.jpg"
+        expect(new_post.attachment.path(:medium)).to eq "/medium/posts_photo.png"
       end
     end
 
@@ -34,18 +34,13 @@ describe Paperclip::Storage::Dropbox::PathGenerator do
       end
 
       it "evaluates the proc in context of the instance" do
-        expect(new_post.attachment.path).to eq "original/photo.jpg"
+        expect(new_post.attachment.path).to eq "/original/photo.png"
       end
 
       it "appends the style if present" do
-        expect(new_post.attachment.path(:medium)).to eq "medium/photo_medium.jpg"
-        expect(new_post.attachment.path).to eq "original/photo.jpg"
+        expect(new_post.attachment.path(:medium)).to eq "/medium/photo_medium.png"
+        expect(new_post.attachment.path).to eq "/original/photo.png"
       end
-    end
-
-    it "prepends 'Public' when the access type is full dropbox" do
-      @options.update(dropbox_credentials: CREDENTIALS[:dropbox])
-      expect(new_post.attachment.path).to eq "Public/photo.jpg"
     end
 
     it "assigns a unique path when :unique_filename options is passed" do

@@ -1,4 +1,4 @@
-require "dropbox_sdk"
+require "dropbox"
 
 module Paperclip
   module Dropbox

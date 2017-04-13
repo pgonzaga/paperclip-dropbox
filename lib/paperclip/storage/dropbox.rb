@@ -1,4 +1,4 @@
-require "dropbox_sdk"
+require "dropbox"
 require "active_support/core_ext/hash/keys"
 require "paperclip/storage/dropbox/path_generator"
 require "paperclip/storage/dropbox/generator_factory"
@@ -12,7 +12,7 @@ module Paperclip
         base.instance_eval do
           @options[:dropbox_options] ||= {}
           @options[:path] = nil if @options[:path] == self.class.default_options[:path]
-          @options[:dropbox_visibility] ||= "public"
+          @options[:dropbox_visibility] ||= "private"
 
           @path_generator = PathGenerator.new(self, @options)
 
@@ -22,7 +22,7 @@ module Paperclip
 
       def flush_writes
         @queued_for_write.each do |style, file|
-          dropbox_client.put_file(path(style), file.read)
+          dropbox_client.upload(path(style), file.read, { mode: "overwrite" })
         end
         after_flush_writes
         @queued_for_write.clear
@@ -30,7 +30,7 @@ module Paperclip
 
       def flush_deletes
         @queued_for_delete.each do |path|
-          dropbox_client.file_delete(path)
+          dropbox_client.delete(path)
         end
         @queued_for_delete.clear
       end
@@ -44,29 +44,27 @@ module Paperclip
       def path(style = default_style)
         path = @path_generator.generate(style)
         path = File.join("Public", path) if public_dropbox?
-        path
+        File.join("/", path)
       end
 
       def copy_to_local_file(style = default_style, destination_path)
         File.open(destination_path, "wb") do |file|
-          file.write(dropbox_client.get_file(path(style)))
+          file.write(dropbox_client.download(path(style)))
         end
       end
 
       def exists?(style = default_style)
         return false if not present?
-        metadata = dropbox_client.metadata(path(style))
-        not metadata.nil? and not metadata["is_deleted"]
-      rescue DropboxError
+        metadata = dropbox_client.get_metadata(path(style))
+        not metadata.nil?
+      rescue ::Dropbox::ApiError
         false
       end
 
       def dropbox_client
         @dropbox_client ||= begin
           credentials = dropbox_credentials
-          session = DropboxSession.new(credentials[:app_key], credentials[:app_secret])
-          session.set_access_token(credentials[:access_token], credentials[:access_token_secret])
-          DropboxClient.new(session, credentials[:access_type])
+          ::Dropbox::Client.new(credentials[:access_token])
         end
       end
 

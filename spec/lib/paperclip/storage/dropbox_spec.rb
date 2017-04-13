@@ -5,64 +5,60 @@ require "active_support/core_ext/hash/keys"
 
 describe Paperclip::Storage::Dropbox, :vcr do
   before do
-    @options = {}
+    @options = { }
   end
 
   def new_post(options = {})
     Post.has_attached_file :attachment,
       {dropbox_credentials: CREDENTIALS[:dropbox]}.deep_merge(@options)
     Post.validates_attachment_content_type :attachment, :content_type => %w(image/jpeg image/jpg image/png)
-    Post.new({attachment: uploaded_file("photo.jpg")}.merge(options))
+    Post.new({attachment: uploaded_file("photo.png")}.merge(options))
   end
 
-  it "defaults to public dropbox storage" do
+  it "defaults to private dropbox storage" do
     @options.merge!(dropbox_credentials: {access_type: nil})
-    expect(new_post.attachment.dropbox_client.root).to eq "dropbox"
-    expect(new_post.attachment.public_dropbox?).to eq true
+    # expect(new_post.attachment.dropbox_client.root).to eq "dropbox"
+    expect(new_post.attachment.public_dropbox?).to eq false
   end
 
   describe "#dropbox_client" do
-    it "initializes a Dropbox client with credentials" do
-      client = new_post.attachment.dropbox_client
-      credentials = CREDENTIALS[:dropbox]
-      expect(client.session.consumer_key).to eq credentials[:app_key]
-      expect(client.session.consumer_secret).to eq credentials[:app_secret]
-      expect(client.session.access_token.key).to eq credentials[:access_token]
-      expect(client.session.access_token.secret).to eq credentials[:access_token_secret]
-      expect(client.root).to eq({"dropbox" => "dropbox", "app_folder" => "sandbox"}[credentials[:access_type]])
-    end
+    # it "initializes a Dropbox client with credentials" do
+    #   client = new_post.attachment.dropbox_client
+    #   credentials = CREDENTIALS[:dropbox]
+    #   expect(client.root).to eq({"dropbox" => "dropbox", "app_folder" => "sandbox"}[credentials[:access_type]])
+    # end
 
-    it "defaults :access_type to 'dropbox'" do
-      @options.update(dropbox_credentials: CREDENTIALS[:dropbox].except(:access_type))
-      expect(new_post.attachment.dropbox_client.root).to eq "dropbox"
-    end
+    # it "defaults :access_type to 'dropbox'" do
+    #   @options.update(dropbox_credentials: CREDENTIALS[:dropbox].except(:access_type))
+    #   expect(new_post.attachment.dropbox_client.root).to eq "dropbox"
+    # end
 
-    it "initiatlizes a Dropbox client with proc/lambda credentials" do
-      Post.has_attached_file :attachment, {
-        dropbox_credentials: Proc.new { |post_class|
-          post_class.instance.dynamic_dropbox_credentials
-        }
-      }.deep_merge(@options)
-      Post.validates_attachment_content_type :attachment, :content_type => %w(image/jpeg image/jpg image/png)
-
-      post = Post.new({attachment: uploaded_file("photo.jpg")})
-      client = post.attachment.dropbox_client
-
-      expect(client.session.consumer_key).to eq post.object_id
-      expect(client.session.consumer_secret).to eq post.object_id
-      expect(client.session.access_token.key).to eq post.object_id
-      expect(client.session.access_token.secret).to eq post.object_id
-
-      post_2 = Post.new({attachment: uploaded_file("photo.jpg")})
-      client_2 = post_2.attachment.dropbox_client
-
-      expect(client_2.object_id).to_not eq client.object_id
-
-      expect(client_2.session.consumer_key).to eq post_2.object_id
-      expect(client_2.session.consumer_secret).to eq post_2.object_id
-      expect(client_2.session.access_token.key).to eq post_2.object_id
-      expect(client_2.session.access_token.secret).to eq post_2.object_id
-    end
+    # it "initiatlizes a Dropbox client with proc/lambda credentials" do
+    #   Post.has_attached_file :attachment, {
+    #     dropbox_credentials: Proc.new { |post_class|
+    #       post_class.instance.dynamic_dropbox_credentials
+    #     }
+    #   }.deep_merge(@options)
+    #   Post.validates_attachment_content_type :attachment, :content_type => %w(image/jpeg image/jpg image/png)
+    #
+    #   post = Post.new({attachment: uploaded_file("photo.png")})
+    #   client = post.attachment.dropbox_client
+    #
+    #   expect(client.session.consumer_key).to eq post.object_id
+    #   expect(client.session.consumer_secret).to eq post.object_id
+    #   expect(client.session.access_token.key).to eq post.object_id
+    #   expect(client.session.access_token.secret).to eq post.object_id
+    #
+    #   post_2 = Post.new({attachment: uploaded_file("photo.png")})
+    #   client_2 = post_2.attachment.dropbox_client
+    #
+    #   expect(client_2.object_id).to_not eq client.object_id
+    #
+    #   expect(client_2.session.consumer_key).to eq post_2.object_id
+    #   expect(client_2.session.consumer_secret).to eq post_2.object_id
+    #   expect(client_2.session.access_token.key).to eq post_2.object_id
+    #   expect(client_2.session.access_token.secret).to eq post_2.object_id
+    # end
 
   end
 
@@ -73,7 +69,7 @@ describe Paperclip::Storage::Dropbox, :vcr do
     end
 
     it "handles spaces in filenames" do
-      post = new_post(attachment: uploaded_file("photo with spaces.jpg")).tap(&:save)
+      post = new_post(attachment: uploaded_file("photo with spaces.png")).tap(&:save)
       expect(post.attachment.url).to be_an_existing_url
     end
   end
@@ -88,12 +84,12 @@ describe Paperclip::Storage::Dropbox, :vcr do
 
     it "doesn't raise errors when file doesn't exist on Dropbox" do
       post = new_post.tap(&:save)
-      post.attachment.dropbox_client.file_delete(post.attachment.path)
+      post.attachment.dropbox_client.delete(post.attachment.path)
       expect { post.destroy }.not_to raise_error
     end
 
     it "handles spaces in filenames" do
-      post = new_post(attachment: uploaded_file("photo with spaces.jpg")).tap(&:save)
+      post = new_post(attachment: uploaded_file("photo with spaces.png")).tap(&:save)
       url = post.attachment.url
       post.destroy
       expect(url).not_to be_an_existing_url
@@ -138,7 +134,7 @@ describe Paperclip::Storage::Dropbox, :vcr do
   describe "#copy_to_local_file" do
     it "copies file from Dropbox to a local file" do
       post = new_post.tap(&:save)
-      destination = File.join(Bundler.root, "tmp/photo.jpg")
+      destination = File.join(Bundler.root, "tmp/photo.png")
       post.attachment.copy_to_local_file(destination)
       expect(File.exists?(destination)).to be_true
       File.delete(destination)

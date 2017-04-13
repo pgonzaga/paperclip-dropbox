@@ -1,36 +1,32 @@
-require "dropbox_sdk"
+require "dropbox"
 require_relative "vcr"
 
-class DropboxSession
-  attr_reader :consumer_key, :consumer_secret
-end
-
-class DropboxClient
+class Dropbox::Client
   attr_reader :session, :root
 
   def self.uploaded_files
     @uploaded_files ||= []
   end
 
-  alias normal_put_file put_file
-  def put_file(path, file, *args)
+  alias normal_upload upload
+  def upload(path, file, options = {})
     self.class.uploaded_files << [path, self]
-    normal_put_file(path, file, *args)
+    normal_upload(path, file, options)
   end
 
-  alias normal_file_delete file_delete
-  def file_delete(path, *args)
+  alias normal_delete delete
+  def delete(path)
     self.class.uploaded_files.delete_if { |p, _| p == path }
-    normal_file_delete(path, *args)
+    normal_delete(path)
   end
 end
 
 # Delete all uploaded files if there were any
 RSpec.configure do |config|
   config.after do
-    DropboxClient.uploaded_files.each do |path, dropbox_client|
-      dropbox_client.file_delete(path)
+    Dropbox::Client.uploaded_files.each do |path, dropbox_client|
+      dropbox_client.delete(path)
     end
-    DropboxClient.uploaded_files.clear
+    Dropbox::Client.uploaded_files.clear
   end
 end
